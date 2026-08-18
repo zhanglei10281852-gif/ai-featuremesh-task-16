@@ -131,20 +131,19 @@ func (s *CatalogService) ValidateSnapshot(ctx context.Context, snapshotID string
 		return domain.DatasetSnapshot{}, err
 	}
 	var result domain.DatasetSnapshot
-	writeCtx := requestmeta.DetachForWrite(ctx)
-	err := s.store.WithTx(writeCtx, func(tx repository.Tx) error {
-		batch, err := tx.GetDatasetSnapshot(writeCtx, snapshotID)
+	err := s.store.WithTx(ctx, func(tx repository.Tx) error {
+		batch, err := tx.GetDatasetSnapshot(ctx, snapshotID)
 		if err != nil {
 			return err
 		}
 		if err := batch.Transition(domain.SnapshotValidated, s.clock.Now()); err != nil {
 			return err
 		}
-		if err := tx.UpdateDatasetSnapshot(writeCtx, batch, batch.Version); err != nil {
+		if err := tx.UpdateDatasetSnapshot(ctx, batch, batch.Version); err != nil {
 			return err
 		}
 		result = batch
-		return s.audit.Record(writeCtx, tx, "snapshot_validated", "dataset_snapshot", batch.ID, "success", nil)
+		return s.audit.Record(ctx, tx, "snapshot_validated", "dataset_snapshot", batch.ID, "success", nil)
 	})
 	return result, err
 }
